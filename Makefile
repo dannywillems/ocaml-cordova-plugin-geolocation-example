@@ -50,7 +50,7 @@ js_of_ocaml: $(BYTE_FILES)
 ifeq ($(USE_GEN_JS_API),True)
 	$(CC_JS) --pretty +gen_js_api/ojs_runtime.js $(BYTE_FILES)
 else
-	$(CC_JS) --pretty --debug-info $(BYTE_FILES)
+	$(CC_JS) --pretty $(BYTE_FILES)
 endif
 
 ##### Compile ml to bytecode
@@ -70,6 +70,7 @@ else
 endif
 
 $(PROD_DIRECTORY)/%: $(DEV_DIRECTORY)/%
+	$(RM) $@
 	cp -r $< $@
 
 ##### Cordova rules
@@ -163,5 +164,8 @@ init_plugins: $(PLUGINS)
 $(PLUGINS):
 	cordova plugin add $@
 
-init_dep: init_plugins
-	# TODO: Initialise the directory with required packages and executables
+init_opam:
+	opam install $(OPAM_PKG)
+
+init: init_dir init_opam init_plugins
+	mkdir -p hooks
