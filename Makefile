@@ -6,6 +6,7 @@ include Makefile.conf
 MLI_FILES					=	$(wildcard $(ML_DIRECTORY)/*.mli)
 BYTE_FILES 					=	$(patsubst $(ML_DIRECTORY)/%.ml, $(ML_DIRECTORY)/%.byte, $(ML_FILES))
 TMP_OUT_BYTECODE			=	$(ML_DIRECTORY)/out.byte
+CC_CAML						=	ocamlc
 
 ifeq ($(SYNTAX_EXTENSION),camlp4)
 	BASIC_PACKAGE 	=	-package js_of_ocaml -package js_of_ocaml.syntax
@@ -14,22 +15,27 @@ else
 	BASIC_PACKAGE	=	-package js_of_ocaml -package js_of_ocaml.ppx
 endif
 
-CC_BYTECODE					=	ocamlfind ocamlc -I $(ML_DIRECTORY) \
-								$(BASIC_PACKAGE) $(CUSTOM_PACKAGE) \
-								$(BASIC_SYNTAX) $(CUSTOM_SYNTAX) -linkpkg
-CC_BYTECODE_GEN_JS_API 		=   ocamlfind ocamlc -I $(ML_DIRECTORY) -o \
-								$(TMP_OUT_BYTECODE) -no-check-prims \
-								$(BASIC_PACKAGE) $(CUSTOM_PACKAGE) \
-								$(BASIC_SYNTAX) $(CUSTOM_SYNTAX) -linkpkg
-CC_JS						=	js_of_ocaml -o $(ML_JS_DIRECTORY)/$(ML_JS_OUTPUT_FILE)
+ifeq ($(USE_GEN_JS_API) $(DEBUG),True True)
+	CC_JS		= js_of_ocaml -o $(ML_JS_DIRECTORY)/$(ML_JS_OUTPUT_FILE) --pretty --debug-info +gen_js_api/ojs_runtime.js $(TMP_OUT_BYTECODE)
+	CC_CAML		= ocamlc -g -no-check-prims
+else ifeq ($(USE_GEN_JS_API) $(DEBUG),True False)
+	CC_JS = js_of_ocaml -o $(ML_JS_DIRECTORY)/$(ML_JS_OUTPUT_FILE) +gen_js_api/ojs_runtime.js $(TMP_OUT_BYTECODE)
+	CC_CAML		= ocamlc -no-check-prims
+else ifeq ($(USE_GEN_JS_API) $(DEBUG),False True)
+	CC_JS = js_of_ocaml -o $(ML_JS_DIRECTORY)/$(ML_JS_OUTPUT_FILE) --pretty --debug-info $(TMP_OUT_BYTECODE)
+	CC_CAML		= ocamlc -g
+else
+	CC_JS = js_of_ocaml -o $(ML_JS_DIRECTORY)/$(ML_JS_OUTPUT_FILE) $(TMP_OUT_BYTECODE)
+endif
+
 CMO_FILES					=	$(patsubst $(ML_DIRECTORY)/%.ml, $(ML_DIRECTORY)/%.cmo, $(ML_FILES))
 CMI_FILES					=	$(patsubst $(ML_DIRECTORY)/%.ml, $(ML_DIRECTORY)/%.cmi, $(ML_FILES))
 
 ifeq ($(DEBUG),True)
-	    LESSC=lessc
-	else
-	    LESSC=lessc --clean-css
-	endif
+	LESSC	= lessc
+else
+	LESSC	= lessc --clean-css
+endif
 ################################################################################
 
 ################################################################################
@@ -45,19 +51,12 @@ ifeq ($(DEBUG),True)
 all: init_dir css js_of_ocaml $(PROD_DIRECTORY_LIST)
 
 ##### Compile bytecode to js
-js_of_ocaml: $(BYTE_FILES)
+js_of_ocaml:
 	mkdir -p $(ML_JS_DIRECTORY)
-ifeq ($(USE_GEN_JS_API),True)
-	$(CC_JS) --pretty +gen_js_api/ojs_runtime.js $(BYTE_FILES)
-else
-	$(CC_JS) --pretty $(BYTE_FILES)
-endif
-
-##### Compile ml to bytecode
-$(ML_DIRECTORY)/%.byte: $(ML_DIRECTORY)/%.ml
-	ocamlfind ocamlc -I $(ML_DIRECTORY) -o $@ -no-check-prims \
+	ocamlfind $(CC_CAML) -I $(ML_DIRECTORY) -o $(TMP_OUT_BYTECODE) \
 	$(BASIC_PACKAGE) $(CUSTOM_PACKAGE) $(BASIC_SYNTAX) $(CUSTOM_SYNTAX) \
-	-linkpkg $<
+	-linkpkg $(ML_FILES) $(MLI_FILES)
+	$(CC_JS)
 
 ##### MINIFY CSS
 css: clean_css_minify $(CSS_FILES)
