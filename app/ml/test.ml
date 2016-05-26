@@ -45,6 +45,4 @@ let on_device_ready _ =
   Dom.appendChild doc##.body button;
   Js._false
 
-let _ =
-  Dom.addEventListener Dom_html.document (Dom.Event.make "deviceready")
-  (Dom_html.handler on_device_ready) Js._false
+let _ = Cordova.Event.device_ready on_device_ready
