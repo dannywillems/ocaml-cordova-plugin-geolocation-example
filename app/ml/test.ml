@@ -10,7 +10,7 @@ let create_paragraph str =
   p##.innerHTML := Js.string str;
   p
 
-let on_device_ready _ =
+let on_device_ready () =
   let geo = Cordova_geolocation.t () in
   let id = geo#watch_position
     (fun position ->
@@ -42,7 +42,6 @@ let on_device_ready _ =
     Lwt_js_events.clicks button
     ( fun _ev _thread -> geo#clear_watch id; Lwt.return ())
   );
-  Dom.appendChild doc##.body button;
-  Js._false
+  Dom.appendChild doc##.body button
 
 let _ = Cordova.Event.device_ready on_device_ready
