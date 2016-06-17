@@ -8,39 +8,56 @@ let data_to_str nb =
 let create_paragraph str =
   let p = Dom_html.createP doc in
   p##.innerHTML := Js.string str;
-  p
+  Dom.appendChild doc##.body p
 
 let on_device_ready () =
-  let geo = Cordova_geolocation.t () in
-  let id = geo#watch_position
+  let err_cb e =
+    Jsoo_lib.alert (Cordova_geolocation.position_error_message e)
+  in
+  let id = Cordova_geolocation.watch_position
     (fun position ->
-      let c = position#coords in
-      let time = position#timestamp in
-      Dom.appendChild doc##.body
-        (create_paragraph ("Latitude: " ^ (data_to_str c#latitude)));
-      Dom.appendChild doc##.body
-        (create_paragraph ("Longitude: " ^ (data_to_str c#longitude)));
-      Dom.appendChild doc##.body
-        (create_paragraph ("Altitude: " ^ (data_to_str c#altitude)));
-      Dom.appendChild doc##.body
-        (create_paragraph ("Accuracy: " ^ (data_to_str c#accuracy)));
-      Dom.appendChild doc##.body
-        (create_paragraph ("Heading: " ^ (data_to_str c#heading)));
-      Dom.appendChild doc##.body
-        (create_paragraph ("Time: " ^ (data_to_str (Some (float_of_int time)))));
-      Dom.appendChild doc##.body (create_paragraph "------------------------")
+      let c = Cordova_geolocation.coords position in
+      let time = Cordova_geolocation.timestamp position in
+        create_paragraph
+        (
+          "Latitude: " ^
+          (data_to_str (Cordova_geolocation.latitude c))
+        );
+        create_paragraph
+        (
+          "Longitude: " ^
+          (data_to_str (Cordova_geolocation.longitude c))
+        );
+        create_paragraph
+        (
+          "Altitude: " ^
+          (data_to_str (Cordova_geolocation.altitude c))
+        );
+        create_paragraph
+        (
+          "Accuracy: " ^
+          (data_to_str (Cordova_geolocation.accuracy c))
+        );
+        create_paragraph
+        (
+          "Heading: " ^
+          (data_to_str (Cordova_geolocation.heading c))
+        );
+        create_paragraph
+        (
+          "Time: " ^ (data_to_str (Some (float_of_int time)))
+        );
+      create_paragraph "------------------------"
     )
-    (fun error ->
-      Dom_html.window##(alert (Js.string error#message))
-    )
-    (Cordova_geolocation.create_options ())
+    err_cb
+    ()
   in
   let button = Dom_html.createButton doc in
   button##.innerHTML := Js.string "Stop";
   Lwt.async
   ( fun () ->
     Lwt_js_events.clicks button
-    ( fun _ev _thread -> geo#clear_watch id; Lwt.return ())
+    ( fun _ev _thread -> Cordova_geolocation.clear_watch id; Lwt.return ())
   );
   Dom.appendChild doc##.body button
 
