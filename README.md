@@ -6,12 +6,7 @@ binding
 
 ## How to compile?
 
-1\. Add the plugin list repository as a remote opam package provider with
-```Shell
-opam repository add cordova https://github.com/dannywillems/ocaml-cordova-plugin-list.git
-```
-
-2\. Initialize the project directory with
+1\. Initialize the project directory with
 ```
 make init
 ```
